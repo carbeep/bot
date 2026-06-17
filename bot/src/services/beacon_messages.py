@@ -52,26 +52,25 @@ def render_searching(beacon: dict[str, Any]) -> tuple[str, InlineKeyboardMarkup]
 def render_found(beacon: dict[str, Any], plate: str | None) -> tuple[str, InlineKeyboardMarkup]:
     model = model_title(beacon.get("current_car_model") or "Авто")
     dist = format_distance(beacon.get("current_car_distance") or 0)
-    text = f"🚗 Нашёл! {model} — {dist}"
+    car_id = beacon.get("current_car_id") or ""
+    bid = _bid(beacon)
+
+    rows: list[list[InlineKeyboardButton]] = []
 
     if plate:
-        book_url = f"delimobil://map/car/{plate}"
-        book_text = f"🔓 Забронировать {model}"
-    else:
-        book_url = "delimobil://map"
-        book_text = "🔓 Открыть Делимобиль"
-
-    rows: list[list[InlineKeyboardButton]] = [
-        [InlineKeyboardButton(text=book_text, url=book_url)],
-    ]
-    if not plate:
-        car_id = beacon.get("current_car_id") or ""
+        text = f"🚗 Нашёл! {model} — {dist}\n🔑 {plate}"
         rows.append([InlineKeyboardButton(
-            text="📝 Сообщить госномер",
-            callback_data=f"b:plate:{_bid(beacon)}:{car_id}")])
+            text=f"🔓 Забронировать {model}",
+            url=f"https://app.delimobil.ru/auto/{plate}")])
+    else:
+        text = f"🚗 Нашёл! {model} — {dist}"
+        rows.append([InlineKeyboardButton(
+            text="📝 Сообщить госномер → получить ссылку",
+            callback_data=f"b:plate:{bid}:{car_id}")])
+
     rows.append([
-        InlineKeyboardButton(text="⏭ Пропустить", callback_data=f"b:skip:{_bid(beacon)}"),
-        InlineKeyboardButton(text="⏹ Стоп", callback_data=f"b:stop:{_bid(beacon)}"),
+        InlineKeyboardButton(text="⏭ Пропустить", callback_data=f"b:skip:{bid}"),
+        InlineKeyboardButton(text="⏹ Стоп", callback_data=f"b:stop:{bid}"),
     ])
     return text, InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -81,20 +80,26 @@ def render_found(beacon: dict[str, Any], plate: str | None) -> tuple[str, Inline
 def render_monitoring(beacon: dict[str, Any], plate: str | None) -> tuple[str, InlineKeyboardMarkup]:
     model = model_title(beacon.get("current_car_model") or "Авто")
     dist = format_distance(beacon.get("current_car_distance") or 0)
-    text = f"✅ {model} ещё свободна — {dist}\nПроверено: {_now_str()}"
+    bid = _bid(beacon)
+    car_id = beacon.get("current_car_id") or ""
+
+    rows: list[list[InlineKeyboardButton]] = []
 
     if plate:
-        book_url = f"delimobil://map/car/{plate}"
-        book_text = f"🔓 Забронировать {model}"
+        text = f"✅ {model} ещё свободна — {dist}\n🔑 {plate} · Проверено: {_now_str()}"
+        rows.append([InlineKeyboardButton(
+            text=f"🔓 Забронировать {model}",
+            url=f"https://app.delimobil.ru/auto/{plate}")])
     else:
-        book_url = "delimobil://map"
-        book_text = "🔓 Открыть Делимобиль"
+        text = f"✅ {model} ещё свободна — {dist}\nПроверено: {_now_str()}"
+        rows.append([InlineKeyboardButton(
+            text="📝 Госномер → ссылка на бронь",
+            callback_data=f"b:plate:{bid}:{car_id}")])
 
-    rows: list[list[InlineKeyboardButton]] = [
-        [InlineKeyboardButton(text=book_text, url=book_url)],
-        [InlineKeyboardButton(text="⏭ Другую", callback_data=f"b:skip:{_bid(beacon)}"),
-         InlineKeyboardButton(text="⏹ Стоп", callback_data=f"b:stop:{_bid(beacon)}")],
-    ]
+    rows.append([
+        InlineKeyboardButton(text="⏭ Другую", callback_data=f"b:skip:{bid}"),
+        InlineKeyboardButton(text="⏹ Стоп", callback_data=f"b:stop:{bid}"),
+    ])
     return text, InlineKeyboardMarkup(inline_keyboard=rows)
 
 
