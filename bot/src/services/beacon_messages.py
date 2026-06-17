@@ -58,9 +58,14 @@ def render_found(beacon: dict[str, Any], plate: str | None) -> tuple[str, Inline
     rows: list[list[InlineKeyboardButton]] = []
 
     if plate:
-        text = f"🚗 Нашёл! {model} — {dist}\n🔑 {plate}"
+        deeplink = f"delimobil://map/car/{plate}"
+        text = (
+            f"🚗 Нашёл! {model} — {dist}\n\n"
+            f"🔓 <b>Забронировать:</b> {deeplink}\n\n"
+            f"<i>Если ссылка не открывается:</i>"
+        )
         rows.append([InlineKeyboardButton(
-            text=f"🔓 Забронировать {model}",
+            text=f"🔓 Открыть в браузере",
             url=f"https://app.delimobil.ru/auto/{plate}")])
     else:
         text = f"🚗 Нашёл! {model} — {dist}"
@@ -86,9 +91,14 @@ def render_monitoring(beacon: dict[str, Any], plate: str | None) -> tuple[str, I
     rows: list[list[InlineKeyboardButton]] = []
 
     if plate:
-        text = f"✅ {model} ещё свободна — {dist}\n🔑 {plate} · Проверено: {_now_str()}"
+        deeplink = f"delimobil://map/car/{plate}"
+        text = (
+            f"✅ {model} ещё свободна — {dist}\n"
+            f"🔓 {deeplink}\n"
+            f"Проверено: {_now_str()}"
+        )
         rows.append([InlineKeyboardButton(
-            text=f"🔓 Забронировать {model}",
+            text="🔓 Открыть в браузере",
             url=f"https://app.delimobil.ru/auto/{plate}")])
     else:
         text = f"✅ {model} ещё свободна — {dist}\nПроверено: {_now_str()}"
