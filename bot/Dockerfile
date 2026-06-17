@@ -1,10 +1,10 @@
 FROM python:3.12-slim
 
-WORKDIR /app
+WORKDIR /app/bot
 
-COPY bot/pyproject.toml bot/pyproject.toml
-RUN pip install --no-cache-dir -e bot/
+COPY bot/pyproject.toml .
+RUN pip install --no-cache-dir .
 
-COPY bot/ bot/
+COPY bot/ .
 
-CMD ["python", "-m", "bot"]
+CMD ["python", "__main__.py"]
