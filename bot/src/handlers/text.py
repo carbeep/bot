@@ -19,7 +19,8 @@ async def handle_text(message: Message) -> None:
             plate = normalize(text)
             await save_plate(car_id, plate, uid)
             await pop_pending_plate(uid)
-            await message.answer(f"Госномер <b>{display(plate)}</b> сохранён для машины {car_id}. Спасибо!")
+            await message.answer(
+                f"Госномер <b>{display(plate)}</b> сохранён для машины {car_id}. Спасибо!")
         else:
             await message.answer("Не похоже на госномер. Формат: <code>А123ВС77</code>.")
         return
@@ -28,10 +29,11 @@ async def handle_text(message: Message) -> None:
         plate = normalize(text)
         existing = await find_plate_by_number(plate)
         if existing:
-            await message.answer(f"Госномер <b>{display(plate)}</b> уже привязан к машине {existing}.")
+            await message.answer(f"<b>{display(plate)}</b> уже привязан к машине {existing}.")
         else:
-            await message.answer(f"Похоже на госномер: <b>{display(plate)}</b>.\n"
-                                 "Нажми «📝 Сообщить госномер» в уведомлении чтобы привязать.")
+            await message.answer(
+                f"Похоже на госномер: <b>{display(plate)}</b>.\n"
+                "Нажми «📝 Сообщить госномер» на маячке чтобы привязать.")
         return
 
-    await message.answer("Не понимаю. /help — команды, или отправь геолокацию.")
+    await message.answer("Отправь 📍 локацию чтобы запустить маячок. /help — справка.")

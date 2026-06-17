@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # Delimobil
     REGION_ID: int = 16
     POLL_INTERVAL: int = 15
-    NOTIFY_TTL_MINUTES: int = 30
+    BEACON_TTL_MINUTES: int = 60
 
     # PostgreSQL
     POSTGRES_HOST: str = "localhost"

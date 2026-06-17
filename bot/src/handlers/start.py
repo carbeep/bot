@@ -1,68 +1,66 @@
 from aiogram import Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import Message
+from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup
 
-from src.repositories.user_repo import ensure_user, get_user, update_user
-from src.repositories.zone_repo import get_user_zones
-from src.settings import get_settings
+from src.repositories.beacon_repo import stop_user_beacons
+from src.repositories.user_repo import ensure_user
+from src.services.beacon_messages import render_stopped
 
 router = Router()
+
+_LOCATION_KB = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text="📍 Отправить локацию", request_location=True)]],
+    resize_keyboard=True, one_time_keyboard=True,
+)
 
 
 @router.message(CommandStart())
 async def cmd_start(message: Message) -> None:
     await ensure_user(message.from_user.id)
     await message.answer(
-        "<b>Привет! Я Carbeep</b> — бот для мониторинга машин Делимобиля.\n\n"
-        "Отправь мне <b>геолокацию</b> — я создам зону наблюдения. "
-        "Как только рядом появится свободная машина — пришлю уведомление.\n\n"
-        "<b>Команды:</b>\n"
-        "/zones — мои зоны\n"
-        "/now — машины рядом прямо сейчас\n"
-        "/nearest — ближайшая машина\n"
-        "/filter — фильтр по модели\n"
-        "/schedule — расписание зон\n"
-        "/settings — настройки\n"
-        "/region — сменить город\n"
-        "/plate — сообщить госномер\n"
-        "/status — статус бота\n"
-        "/help — справка\n"
-        "/stop — отключить уведомления",
-    )
-
-
-@router.message(Command("help"))
-async def cmd_help(message: Message) -> None:
-    await message.answer(
-        "<b>Справка Carbeep</b>\n\n"
-        "1. Отправь <b>геолокацию</b> — создам зону наблюдения.\n"
-        "2. Бот опрашивает Делимобиль каждые 15 сек.\n"
-        "3. Новые машины в зонах → уведомление.\n\n"
-        "Если знаешь госномер — нажми «📝 Сообщить госномер» в уведомлении.",
+        "<b>Carbeep</b> — мониторинг машин Делимобиля\n\n"
+        "Отправь 📍 локацию — я запущу маячок и буду обновлять "
+        "одно сообщение в реальном времени. Как только рядом появится "
+        "свободная машина — покажу с кнопкой бронирования.\n\n"
+        "/stop — остановить маячок\n"
+        "/settings — город, фильтр моделей\n"
+        "/help — справка",
+        reply_markup=_LOCATION_KB,
     )
 
 
 @router.message(Command("stop"))
 async def cmd_stop(message: Message) -> None:
     await ensure_user(message.from_user.id)
-    await update_user(message.from_user.id, notifications_on=False)
-    await message.answer("Уведомления <b>выключены</b>. Включить: /settings")
+    stopped = await stop_user_beacons(message.from_user.id)
+    for b in stopped:
+        if b.get("message_id") and b.get("chat_id"):
+            text, kb = render_stopped(b)
+            try:
+                await message.bot.edit_message_text(
+                    text, chat_id=b["chat_id"], message_id=b["message_id"], reply_markup=kb)
+            except Exception:
+                pass
+    if stopped:
+        await message.answer("⏹ Маячок остановлен.")
+    else:
+        await message.answer("Нет активных маячков. Отправь 📍 локацию.", reply_markup=_LOCATION_KB)
 
 
-@router.message(Command("status"))
-async def cmd_status(message: Message) -> None:
-    await ensure_user(message.from_user.id)
-    s = get_settings()
-    user = await get_user(message.from_user.id)
-    zones = await get_user_zones(message.from_user.id)
-    active = sum(1 for z in zones if z["active"])
-    region = s.REGIONS.get(user["region_id"], "?")
-    notif = "вкл" if user["notifications_on"] else "выкл"
-    filt = user["model_filter"] or "нет"
-    qs, qe = user["quiet_start"], user["quiet_end"]
-    quiet = f"{qs}:00–{qe}:00" if qs >= 0 and qe >= 0 else "нет"
+@router.message(Command("help"))
+async def cmd_help(message: Message) -> None:
     await message.answer(
-        f"<b>Статус</b>\n\nРегион: {region}\nЗоны: {len(zones)} (активных: {active})\n"
-        f"Уведомления: {notif}\nФильтр: {filt}\nТихие часы: {quiet}\n"
-        f"Интервал: {s.POLL_INTERVAL}с",
+        "<b>Как пользоваться</b>\n\n"
+        "📍 Отправь локацию — запустится маячок.\n"
+        "Одно сообщение обновляется в реальном времени:\n"
+        "🔍 ищет → 🚗 нашёл → ✅ следит → ❌ уехала → 🔍 ищет дальше\n\n"
+        "<b>Кнопки на маячке:</b>\n"
+        "🔓 Забронировать — открыть машину в Делимобиле\n"
+        "⏭ Пропустить — показать следующую\n"
+        "⚙️ Радиус — изменить радиус поиска\n"
+        "🔍 Фильтр — фильтр по модели\n"
+        "⏹ Стоп — остановить\n\n"
+        "/stop — остановить маячок\n"
+        "/settings — город, фильтр",
+        reply_markup=_LOCATION_KB,
     )
